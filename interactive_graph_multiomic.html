@@ -1,0 +1,576 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/css/tom-select.min.css" integrity="sha512-43fHB3GLgZfz8QXl1RPQ8O66oIgv3po9cJ5erMt1c4QISq9dYb195T3vr5ImnJPXuVroKcGBPXBFKETW8jrPNQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/js/tom-select.complete.js" integrity="sha512-jeF9CfnvzDiw9G9xiksVjxR2lib44Gnovvkv+3CgCG6NXCD4gqlA5nDAVW5WjpA+i+/zKsUWV5xNEbW1X/HH0Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 900px;
+                 background-color: #ffffff;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+             #config {
+                 float: left;
+                 width: 400px;
+                 height: 600px;
+             }
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+                <div id="select-menu" class="card-header">
+                    <div class="row no-gutters">
+                        <div class="col-10 pb-2">
+                            <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="selectNode([value]);"
+                            id="select-node"
+                            placeholder="Select node..."
+                            >
+                                <option selected>Select a Node by ID</option>
+                                
+                                    <option value="ATG">ATG</option>
+                                
+                                    <option value="GTG">GTG</option>
+                                
+                                    <option value="Val">Val</option>
+                                
+                                    <option value="AGG">AGG</option>
+                                
+                                    <option value="Arg">Arg</option>
+                                
+                                    <option value="ATA">ATA</option>
+                                
+                                    <option value="Ile">Ile</option>
+                                
+                                    <option value="AAG">AAG</option>
+                                
+                                    <option value="Lys">Lys</option>
+                                
+                                    <option value="ACG">ACG</option>
+                                
+                                    <option value="Thr">Thr</option>
+                                
+                                    <option value="ATT">ATT</option>
+                                
+                                    <option value="ATC">ATC</option>
+                                
+                                    <option value="TTG">TTG</option>
+                                
+                                    <option value="Leu">Leu</option>
+                                
+                                    <option value="CTG">CTG</option>
+                                
+                                    <option value="GGG">GGG</option>
+                                
+                                    <option value="Gly">Gly</option>
+                                
+                                    <option value="Met">Met</option>
+                                
+                                    <option value="GCG">GCG</option>
+                                
+                                    <option value="Ala">Ala</option>
+                                
+                                    <option value="GAG">GAG</option>
+                                
+                                    <option value="Glu">Glu</option>
+                                
+                                    <option value="TGG">TGG</option>
+                                
+                                    <option value="Trp">Trp</option>
+                                
+                                    <option value="AGT">AGT</option>
+                                
+                                    <option value="Ser">Ser</option>
+                                
+                                    <option value="ACA">ACA</option>
+                                
+                                    <option value="AGA">AGA</option>
+                                
+                                    <option value="AAA">AAA</option>
+                                
+                                    <option value="CTT">CTT</option>
+                                
+                                    <option value="CGT">CGT</option>
+                                
+                                    <option value="CCT">CCT</option>
+                                
+                                    <option value="Pro">Pro</option>
+                                
+                                    <option value="TTT">TTT</option>
+                                
+                                    <option value="Phe">Phe</option>
+                                
+                                    <option value="GTT">GTT</option>
+                                
+                                    <option value="CAT">CAT</option>
+                                
+                                    <option value="His">His</option>
+                                
+                                    <option value="TGT">TGT</option>
+                                
+                                    <option value="Cys">Cys</option>
+                                
+                                    <option value="GGT">GGT</option>
+                                
+                                    <option value="TCT">TCT</option>
+                                
+                                    <option value="ACT">ACT</option>
+                                
+                                    <option value="CGA">CGA</option>
+                                
+                                    <option value="TGA">TGA</option>
+                                
+                                    <option value="stp">stp</option>
+                                
+                                    <option value="GGA">GGA</option>
+                                
+                                    <option value="CAA">CAA</option>
+                                
+                                    <option value="Gln">Gln</option>
+                                
+                                    <option value="CCA">CCA</option>
+                                
+                                    <option value="CTA">CTA</option>
+                                
+                                    <option value="AAT">AAT</option>
+                                
+                                    <option value="Asn">Asn</option>
+                                
+                                    <option value="AGC">AGC</option>
+                                
+                                    <option value="GAA">GAA</option>
+                                
+                                    <option value="GCA">GCA</option>
+                                
+                                    <option value="GTA">GTA</option>
+                                
+                                    <option value="TCA">TCA</option>
+                                
+                                    <option value="TAC">TAC</option>
+                                
+                                    <option value="GAC">GAC</option>
+                                
+                                    <option value="Asp">Asp</option>
+                                
+                                    <option value="TGC">TGC</option>
+                                
+                                    <option value="TAG">TAG</option>
+                                
+                                    <option value="CAG">CAG</option>
+                                
+                                    <option value="TAA">TAA</option>
+                                
+                                    <option value="TCC">TCC</option>
+                                
+                                    <option value="AAC">AAC</option>
+                                
+                                    <option value="CAC">CAC</option>
+                                
+                                    <option value="GTC">GTC</option>
+                                
+                                    <option value="Tyr">Tyr</option>
+                                
+                                    <option value="GCC">GCC</option>
+                                
+                                    <option value="GGC">GGC</option>
+                                
+                                    <option value="CGC">CGC</option>
+                                
+                                    <option value="TTC">TTC</option>
+                                
+                                    <option value="CCG">CCG</option>
+                                
+                                    <option value="CGG">CGG</option>
+                                
+                                    <option value="CTC">CTC</option>
+                                
+                                    <option value="TCG">TCG</option>
+                                
+                                    <option value="GAT">GAT</option>
+                                
+                                    <option value="GCT">GCT</option>
+                                
+                                    <option value="TAT">TAT</option>
+                                
+                                    <option value="TTA">TTA</option>
+                                
+                                    <option value="CCC">CCC</option>
+                                
+                                    <option value="ACC">ACC</option>
+                                
+                            </select>
+                        </div>
+                        <div class="col-2 pb-2">
+                            <button type="button" class="btn btn-primary btn-block" onclick="neighbourhoodHighlight({nodes: []});">Reset Selection</button>
+                        </div>
+                    </div>
+                </div>
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+            <div id="config"></div>
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+                  new TomSelect("#select-node",{
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      }
+                  });
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "rgb(115, 0, 168)", "id": "ATG", "label": "ATG", "shape": "dot", "size": 22.619047619047617}, {"color": "rgb(97, 0, 166)", "id": "GTG", "label": "GTG", "shape": "dot", "size": 17.857142857142854}, {"color": "rgb(126, 3, 167)", "id": "Val", "label": "Val", "shape": "dot", "size": 25.0}, {"color": "rgb(101, 0, 167)", "id": "AGG", "label": "AGG", "shape": "dot", "size": 19.047619047619047}, {"color": "rgb(147, 16, 161)", "id": "Arg", "label": "Arg", "shape": "dot", "size": 30.952380952380953}, {"color": "rgb(92, 0, 165)", "id": "ATA", "label": "ATA", "shape": "dot", "size": 16.666666666666664}, {"color": "rgb(97, 0, 166)", "id": "Ile", "label": "Ile", "shape": "dot", "size": 17.857142857142854}, {"color": "rgb(106, 0, 167)", "id": "AAG", "label": "AAG", "shape": "dot", "size": 20.238095238095237}, {"color": "rgb(78, 2, 161)", "id": "Lys", "label": "Lys", "shape": "dot", "size": 13.095238095238093}, {"color": "rgb(47, 4, 149)", "id": "ACG", "label": "ACG", "shape": "dot", "size": 5.952380952380952}, {"color": "rgb(111, 0, 168)", "id": "Thr", "label": "Thr", "shape": "dot", "size": 21.428571428571427}, {"color": "rgb(101, 0, 167)", "id": "ATT", "label": "ATT", "shape": "dot", "size": 19.047619047619047}, {"color": "rgb(115, 0, 168)", "id": "ATC", "label": "ATC", "shape": "dot", "size": 22.619047619047617}, {"color": "rgb(106, 0, 167)", "id": "TTG", "label": "TTG", "shape": "dot", "size": 20.238095238095237}, {"color": "rgb(130, 4, 167)", "id": "Leu", "label": "Leu", "shape": "dot", "size": 26.190476190476186}, {"color": "rgb(101, 0, 167)", "id": "CTG", "label": "CTG", "shape": "dot", "size": 19.047619047619047}, {"color": "rgb(92, 0, 165)", "id": "GGG", "label": "GGG", "shape": "dot", "size": 16.666666666666664}, {"color": "rgb(130, 4, 167)", "id": "Gly", "label": "Gly", "shape": "dot", "size": 26.190476190476186}, {"color": "rgb(41, 5, 147)", "id": "Met", "label": "Met", "shape": "dot", "size": 4.761904761904762}, {"color": "rgb(63, 3, 156)", "id": "GCG", "label": "GCG", "shape": "dot", "size": 9.523809523809524}, {"color": "rgb(106, 0, 167)", "id": "Ala", "label": "Ala", "shape": "dot", "size": 20.238095238095237}, {"color": "rgb(130, 4, 167)", "id": "GAG", "label": "GAG", "shape": "dot", "size": 26.190476190476186}, {"color": "rgb(82, 1, 163)", "id": "Glu", "label": "Glu", "shape": "dot", "size": 14.285714285714285}, {"color": "rgb(120, 1, 168)", "id": "TGG", "label": "TGG", "shape": "dot", "size": 23.809523809523807}, {"color": "rgb(47, 4, 149)", "id": "Trp", "label": "Trp", "shape": "dot", "size": 5.952380952380952}, {"color": "rgb(126, 3, 167)", "id": "AGT", "label": "AGT", "shape": "dot", "size": 25.0}, {"color": "rgb(155, 23, 158)", "id": "Ser", "label": "Ser", "shape": "dot", "size": 33.33333333333333}, {"color": "rgb(111, 0, 168)", "id": "ACA", "label": "ACA", "shape": "dot", "size": 21.428571428571427}, {"color": "rgb(115, 0, 168)", "id": "AGA", "label": "AGA", "shape": "dot", "size": 22.619047619047617}, {"color": "rgb(134, 7, 166)", "id": "AAA", "label": "AAA", "shape": "dot", "size": 27.38095238095238}, {"color": "rgb(101, 0, 167)", "id": "CTT", "label": "CTT", "shape": "dot", "size": 19.047619047619047}, {"color": "rgb(111, 0, 168)", "id": "CGT", "label": "CGT", "shape": "dot", "size": 21.428571428571427}, {"color": "rgb(101, 0, 167)", "id": "CCT", "label": "CCT", "shape": "dot", "size": 19.047619047619047}, {"color": "rgb(139, 9, 164)", "id": "Pro", "label": "Pro", "shape": "dot", "size": 28.57142857142857}, {"color": "rgb(120, 1, 168)", "id": "TTT", "label": "TTT", "shape": "dot", "size": 23.809523809523807}, {"color": "rgb(87, 1, 164)", "id": "Phe", "label": "Phe", "shape": "dot", "size": 15.476190476190476}, {"color": "rgb(111, 0, 168)", "id": "GTT", "label": "GTT", "shape": "dot", "size": 21.428571428571427}, {"color": "rgb(130, 4, 167)", "id": "CAT", "label": "CAT", "shape": "dot", "size": 26.190476190476186}, {"color": "rgb(82, 1, 163)", "id": "His", "label": "His", "shape": "dot", "size": 14.285714285714285}, {"color": "rgb(120, 1, 168)", "id": "TGT", "label": "TGT", "shape": "dot", "size": 23.809523809523807}, {"color": "rgb(87, 1, 164)", "id": "Cys", "label": "Cys", "shape": "dot", "size": 15.476190476190476}, {"color": "rgb(115, 0, 168)", "id": "GGT", "label": "GGT", "shape": "dot", "size": 22.619047619047617}, {"color": "rgb(92, 0, 165)", "id": "TCT", "label": "TCT", "shape": "dot", "size": 16.666666666666664}, {"color": "rgb(101, 0, 167)", "id": "ACT", "label": "ACT", "shape": "dot", "size": 19.047619047619047}, {"color": "rgb(97, 0, 166)", "id": "CGA", "label": "CGA", "shape": "dot", "size": 17.857142857142854}, {"color": "rgb(63, 3, 156)", "id": "TGA", "label": "TGA", "shape": "dot", "size": 9.523809523809524}, {"color": "rgb(111, 0, 168)", "id": "stp", "label": "stp", "shape": "dot", "size": 21.428571428571427}, {"color": "rgb(101, 0, 167)", "id": "GGA", "label": "GGA", "shape": "dot", "size": 19.047619047619047}, {"color": "rgb(101, 0, 167)", "id": "CAA", "label": "CAA", "shape": "dot", "size": 19.047619047619047}, {"color": "rgb(78, 2, 161)", "id": "Gln", "label": "Gln", "shape": "dot", "size": 13.095238095238093}, {"color": "rgb(106, 0, 167)", "id": "CCA", "label": "CCA", "shape": "dot", "size": 20.238095238095237}, {"color": "rgb(73, 2, 159)", "id": "CTA", "label": "CTA", "shape": "dot", "size": 11.904761904761903}, {"color": "rgb(130, 4, 167)", "id": "AAT", "label": "AAT", "shape": "dot", "size": 26.190476190476186}, {"color": "rgb(92, 0, 165)", "id": "Asn", "label": "Asn", "shape": "dot", "size": 16.666666666666664}, {"color": "rgb(111, 0, 168)", "id": "AGC", "label": "AGC", "shape": "dot", "size": 21.428571428571427}, {"color": "rgb(134, 7, 166)", "id": "GAA", "label": "GAA", "shape": "dot", "size": 27.38095238095238}, {"color": "rgb(111, 0, 168)", "id": "GCA", "label": "GCA", "shape": "dot", "size": 21.428571428571427}, {"color": "rgb(87, 1, 164)", "id": "GTA", "label": "GTA", "shape": "dot", "size": 15.476190476190476}, {"color": "rgb(73, 2, 159)", "id": "TCA", "label": "TCA", "shape": "dot", "size": 11.904761904761903}, {"color": "rgb(126, 3, 167)", "id": "TAC", "label": "TAC", "shape": "dot", "size": 25.0}, {"color": "rgb(134, 7, 166)", "id": "GAC", "label": "GAC", "shape": "dot", "size": 27.38095238095238}, {"color": "rgb(92, 0, 165)", "id": "Asp", "label": "Asp", "shape": "dot", "size": 16.666666666666664}, {"color": "rgb(126, 3, 167)", "id": "TGC", "label": "TGC", "shape": "dot", "size": 25.0}, {"color": "rgb(63, 3, 156)", "id": "TAG", "label": "TAG", "shape": "dot", "size": 9.523809523809524}, {"color": "rgb(115, 0, 168)", "id": "CAG", "label": "CAG", "shape": "dot", "size": 22.619047619047617}, {"color": "rgb(58, 4, 154)", "id": "TAA", "label": "TAA", "shape": "dot", "size": 8.333333333333332}, {"color": "rgb(92, 0, 165)", "id": "TCC", "label": "TCC", "shape": "dot", "size": 16.666666666666664}, {"color": "rgb(134, 7, 166)", "id": "AAC", "label": "AAC", "shape": "dot", "size": 27.38095238095238}, {"color": "rgb(120, 1, 168)", "id": "CAC", "label": "CAC", "shape": "dot", "size": 23.809523809523807}, {"color": "rgb(101, 0, 167)", "id": "GTC", "label": "GTC", "shape": "dot", "size": 19.047619047619047}, {"color": "rgb(78, 2, 161)", "id": "Tyr", "label": "Tyr", "shape": "dot", "size": 13.095238095238093}, {"color": "rgb(97, 0, 166)", "id": "GCC", "label": "GCC", "shape": "dot", "size": 17.857142857142854}, {"color": "rgb(106, 0, 167)", "id": "GGC", "label": "GGC", "shape": "dot", "size": 20.238095238095237}, {"color": "rgb(106, 0, 167)", "id": "CGC", "label": "CGC", "shape": "dot", "size": 20.238095238095237}, {"color": "rgb(130, 4, 167)", "id": "TTC", "label": "TTC", "shape": "dot", "size": 26.190476190476186}, {"color": "rgb(78, 2, 161)", "id": "CCG", "label": "CCG", "shape": "dot", "size": 13.095238095238093}, {"color": "rgb(97, 0, 166)", "id": "CGG", "label": "CGG", "shape": "dot", "size": 17.857142857142854}, {"color": "rgb(97, 0, 166)", "id": "CTC", "label": "CTC", "shape": "dot", "size": 17.857142857142854}, {"color": "rgb(68, 3, 158)", "id": "TCG", "label": "TCG", "shape": "dot", "size": 10.714285714285714}, {"color": "rgb(130, 4, 167)", "id": "GAT", "label": "GAT", "shape": "dot", "size": 26.190476190476186}, {"color": "rgb(101, 0, 167)", "id": "GCT", "label": "GCT", "shape": "dot", "size": 19.047619047619047}, {"color": "rgb(120, 1, 168)", "id": "TAT", "label": "TAT", "shape": "dot", "size": 23.809523809523807}, {"color": "rgb(92, 0, 165)", "id": "TTA", "label": "TTA", "shape": "dot", "size": 16.666666666666664}, {"color": "rgb(101, 0, 167)", "id": "CCC", "label": "CCC", "shape": "dot", "size": 19.047619047619047}, {"color": "rgb(92, 0, 165)", "id": "ACC", "label": "ACC", "shape": "dot", "size": 16.666666666666664}]);
+                  edges = new vis.DataSet([{"from": "ATG", "to": "GTG", "width": 1}, {"from": "ATG", "to": "Val", "width": 1}, {"from": "ATG", "to": "AGG", "width": 1}, {"from": "ATG", "to": "Arg", "width": 1}, {"from": "ATG", "to": "ATA", "width": 1}, {"from": "ATG", "to": "Ile", "width": 1}, {"from": "ATG", "to": "AAG", "width": 1}, {"from": "ATG", "to": "Lys", "width": 1}, {"from": "ATG", "to": "ACG", "width": 1}, {"from": "ATG", "to": "Thr", "width": 1}, {"from": "ATG", "to": "ATT", "width": 1}, {"from": "ATG", "to": "ATC", "width": 1}, {"from": "ATG", "to": "TTG", "width": 1}, {"from": "ATG", "to": "Leu", "width": 1}, {"from": "ATG", "to": "CTG", "width": 1}, {"from": "GTG", "to": "GGG", "width": 1}, {"from": "GTG", "to": "Gly", "width": 1}, {"from": "GTG", "to": "Met", "width": 1}, {"from": "GTG", "to": "GCG", "width": 1}, {"from": "GTG", "to": "Ala", "width": 1}, {"from": "GTG", "to": "GAG", "width": 1}, {"from": "GTG", "to": "Glu", "width": 1}, {"from": "GTG", "to": "CTG", "width": 1}, {"from": "GTG", "to": "Leu", "width": 1}, {"from": "AGG", "to": "GGG", "width": 1}, {"from": "AGG", "to": "Gly", "width": 1}, {"from": "AGG", "to": "TGG", "width": 1}, {"from": "AGG", "to": "Trp", "width": 1}, {"from": "AGG", "to": "ACG", "width": 1}, {"from": "AGG", "to": "Thr", "width": 1}, {"from": "AGG", "to": "AGT", "width": 1}, {"from": "AGG", "to": "Ser", "width": 1}, {"from": "AGG", "to": "Met", "width": 1}, {"from": "ATA", "to": "Met", "width": 1}, {"from": "ATA", "to": "ACA", "width": 1}, {"from": "ATA", "to": "Thr", "width": 1}, {"from": "ATA", "to": "AGA", "width": 1}, {"from": "ATA", "to": "Arg", "width": 1}, {"from": "ATA", "to": "AAA", "width": 1}, {"from": "ATA", "to": "Lys", "width": 1}, {"from": "CTT", "to": "CGT", "width": 1}, {"from": "CTT", "to": "Arg", "width": 1}, {"from": "CTT", "to": "CCT", "width": 1}, {"from": "CTT", "to": "Pro", "width": 1}, {"from": "CTT", "to": "TTT", "width": 1}, {"from": "CTT", "to": "Phe", "width": 1}, {"from": "CTT", "to": "GTT", "width": 1}, {"from": "CTT", "to": "Val", "width": 1}, {"from": "CTT", "to": "CAT", "width": 1}, {"from": "CTT", "to": "His", "width": 1}, {"from": "CGT", "to": "TGT", "width": 1}, {"from": "CGT", "to": "Cys", "width": 1}, {"from": "CGT", "to": "CAT", "width": 1}, {"from": "CGT", "to": "His", "width": 1}, {"from": "CGT", "to": "GGT", "width": 1}, {"from": "CGT", "to": "Gly", "width": 1}, {"from": "CGT", "to": "AGT", "width": 1}, {"from": "CGT", "to": "Ser", "width": 1}, {"from": "CGT", "to": "CCT", "width": 1}, {"from": "CGT", "to": "Pro", "width": 1}, {"from": "CGT", "to": "Leu", "width": 1}, {"from": "CCT", "to": "TCT", "width": 1}, {"from": "CCT", "to": "Ser", "width": 1}, {"from": "CCT", "to": "Leu", "width": 1}, {"from": "CCT", "to": "Arg", "width": 1}, {"from": "CCT", "to": "ACT", "width": 1}, {"from": "CCT", "to": "Thr", "width": 1}, {"from": "CCT", "to": "CAT", "width": 1}, {"from": "CCT", "to": "His", "width": 1}, {"from": "CGA", "to": "TGA", "width": 1}, {"from": "CGA", "to": "stp", "width": 1}, {"from": "CGA", "to": "GGA", "width": 1}, {"from": "CGA", "to": "Gly", "width": 1}, {"from": "CGA", "to": "CAA", "width": 1}, {"from": "CGA", "to": "Gln", "width": 1}, {"from": "CGA", "to": "CCA", "width": 1}, {"from": "CGA", "to": "Pro", "width": 1}, {"from": "CGA", "to": "AGA", "width": 1}, {"from": "CGA", "to": "Arg", "width": 1}, {"from": "CGA", "to": "CTA", "width": 1}, {"from": "CGA", "to": "Leu", "width": 1}, {"from": "AGT", "to": "Arg", "width": 1}, {"from": "AGT", "to": "ATT", "width": 1}, {"from": "AGT", "to": "Ile", "width": 1}, {"from": "AGT", "to": "AAT", "width": 1}, {"from": "AGT", "to": "Asn", "width": 1}, {"from": "AGT", "to": "TGT", "width": 1}, {"from": "AGT", "to": "Cys", "width": 1}, {"from": "AGT", "to": "GGT", "width": 1}, {"from": "AGT", "to": "Gly", "width": 1}, {"from": "AGT", "to": "ACT", "width": 1}, {"from": "AGT", "to": "Thr", "width": 1}, {"from": "AGA", "to": "GGA", "width": 1}, {"from": "AGA", "to": "Gly", "width": 1}, {"from": "AGA", "to": "Ile", "width": 1}, {"from": "AGA", "to": "ACA", "width": 1}, {"from": "AGA", "to": "Thr", "width": 1}, {"from": "AGA", "to": "AAA", "width": 1}, {"from": "AGA", "to": "Lys", "width": 1}, {"from": "AGA", "to": "TGA", "width": 1}, {"from": "AGA", "to": "stp", "width": 1}, {"from": "AGA", "to": "AGC", "width": 1}, {"from": "AGA", "to": "Ser", "width": 1}, {"from": "AGA", "to": "AGT", "width": 1}, {"from": "GGA", "to": "Arg", "width": 1}, {"from": "GGA", "to": "GAA", "width": 1}, {"from": "GGA", "to": "Glu", "width": 1}, {"from": "GGA", "to": "TGA", "width": 1}, {"from": "GGA", "to": "stp", "width": 1}, {"from": "GGA", "to": "GCA", "width": 1}, {"from": "GGA", "to": "Ala", "width": 1}, {"from": "GGA", "to": "GTA", "width": 1}, {"from": "GGA", "to": "Val", "width": 1}, {"from": "ACA", "to": "GCA", "width": 1}, {"from": "ACA", "to": "Ala", "width": 1}, {"from": "ACA", "to": "CCA", "width": 1}, {"from": "ACA", "to": "Pro", "width": 1}, {"from": "ACA", "to": "Ile", "width": 1}, {"from": "ACA", "to": "AAA", "width": 1}, {"from": "ACA", "to": "Lys", "width": 1}, {"from": "ACA", "to": "Arg", "width": 1}, {"from": "ACA", "to": "TCA", "width": 1}, {"from": "ACA", "to": "Ser", "width": 1}, {"from": "TAC", "to": "GAC", "width": 1}, {"from": "TAC", "to": "Asp", "width": 1}, {"from": "TAC", "to": "TGC", "width": 1}, {"from": "TAC", "to": "Cys", "width": 1}, {"from": "TAC", "to": "TAG", "width": 1}, {"from": "TAC", "to": "stp", "width": 1}, {"from": "TAC", "to": "CAG", "width": 1}, {"from": "TAC", "to": "Gln", "width": 1}, {"from": "TAC", "to": "TAA", "width": 1}, {"from": "TAC", "to": "TCC", "width": 1}, {"from": "TAC", "to": "Ser", "width": 1}, {"from": "TAC", "to": "AAC", "width": 1}, {"from": "TAC", "to": "Asn", "width": 1}, {"from": "TAC", "to": "CAC", "width": 1}, {"from": "TAC", "to": "His", "width": 1}, {"from": "GAC", "to": "GTC", "width": 1}, {"from": "GAC", "to": "Val", "width": 1}, {"from": "GAC", "to": "GAG", "width": 1}, {"from": "GAC", "to": "Glu", "width": 1}, {"from": "GAC", "to": "AAC", "width": 1}, {"from": "GAC", "to": "Asn", "width": 1}, {"from": "GAC", "to": "Tyr", "width": 1}, {"from": "GAC", "to": "GCC", "width": 1}, {"from": "GAC", "to": "Ala", "width": 1}, {"from": "GAC", "to": "CAC", "width": 1}, {"from": "GAC", "to": "His", "width": 1}, {"from": "GAC", "to": "GGC", "width": 1}, {"from": "GAC", "to": "Gly", "width": 1}, {"from": "GAC", "to": "GAA", "width": 1}, {"from": "TGC", "to": "CGC", "width": 1}, {"from": "TGC", "to": "Arg", "width": 1}, {"from": "TGC", "to": "TTC", "width": 1}, {"from": "TGC", "to": "Phe", "width": 1}, {"from": "TGC", "to": "Tyr", "width": 1}, {"from": "TGC", "to": "TGA", "width": 1}, {"from": "TGC", "to": "stp", "width": 1}, {"from": "TGC", "to": "TGG", "width": 1}, {"from": "TGC", "to": "Trp", "width": 1}, {"from": "TGC", "to": "GGC", "width": 1}, {"from": "TGC", "to": "Gly", "width": 1}, {"from": "TGC", "to": "TCC", "width": 1}, {"from": "TGC", "to": "Ser", "width": 1}, {"from": "CAG", "to": "TAG", "width": 1}, {"from": "CAG", "to": "stp", "width": 1}, {"from": "CAG", "to": "CCG", "width": 1}, {"from": "CAG", "to": "Pro", "width": 1}, {"from": "CAG", "to": "AAG", "width": 1}, {"from": "CAG", "to": "Lys", "width": 1}, {"from": "CAG", "to": "CGG", "width": 1}, {"from": "CAG", "to": "Arg", "width": 1}, {"from": "CAG", "to": "CAT", "width": 1}, {"from": "CAG", "to": "His", "width": 1}, {"from": "CAG", "to": "CAC", "width": 1}, {"from": "CAG", "to": "GAG", "width": 1}, {"from": "CAG", "to": "Glu", "width": 1}, {"from": "CTG", "to": "CGG", "width": 1}, {"from": "CTG", "to": "Arg", "width": 1}, {"from": "CTG", "to": "CCG", "width": 1}, {"from": "CTG", "to": "Pro", "width": 1}, {"from": "CTG", "to": "Val", "width": 1}, {"from": "CTG", "to": "CAG", "width": 1}, {"from": "CTG", "to": "Gln", "width": 1}, {"from": "CTG", "to": "CTT", "width": 1}, {"from": "CTG", "to": "Leu", "width": 1}, {"from": "CTG", "to": "CTC", "width": 1}, {"from": "CTG", "to": "CTA", "width": 1}, {"from": "CGG", "to": "TGG", "width": 1}, {"from": "CGG", "to": "Trp", "width": 1}, {"from": "CGG", "to": "Gln", "width": 1}, {"from": "CGG", "to": "CCG", "width": 1}, {"from": "CGG", "to": "Pro", "width": 1}, {"from": "CGG", "to": "Leu", "width": 1}, {"from": "CGG", "to": "GGG", "width": 1}, {"from": "CGG", "to": "Gly", "width": 1}, {"from": "CCG", "to": "TCG", "width": 1}, {"from": "CCG", "to": "Ser", "width": 1}, {"from": "CCG", "to": "Arg", "width": 1}, {"from": "CCG", "to": "Leu", "width": 1}, {"from": "GGT", "to": "GAT", "width": 1}, {"from": "GGT", "to": "Asp", "width": 1}, {"from": "GGT", "to": "TGT", "width": 1}, {"from": "GGT", "to": "Cys", "width": 1}, {"from": "GGT", "to": "Ser", "width": 1}, {"from": "GGT", "to": "GCT", "width": 1}, {"from": "GGT", "to": "Ala", "width": 1}, {"from": "GGT", "to": "GTT", "width": 1}, {"from": "GGT", "to": "Val", "width": 1}, {"from": "GGT", "to": "Arg", "width": 1}, {"from": "GGT", "to": "Gly", "width": 1}, {"from": "GAT", "to": "TAT", "width": 1}, {"from": "GAT", "to": "Tyr", "width": 1}, {"from": "GAT", "to": "Gly", "width": 1}, {"from": "GAT", "to": "GTT", "width": 1}, {"from": "GAT", "to": "Val", "width": 1}, {"from": "GAT", "to": "GAA", "width": 1}, {"from": "GAT", "to": "Glu", "width": 1}, {"from": "GAT", "to": "CAT", "width": 1}, {"from": "GAT", "to": "His", "width": 1}, {"from": "GAT", "to": "AAT", "width": 1}, {"from": "GAT", "to": "Asn", "width": 1}, {"from": "GAT", "to": "GCT", "width": 1}, {"from": "GAT", "to": "Ala", "width": 1}, {"from": "GCA", "to": "AAA", "width": 1}, {"from": "GCA", "to": "Lys", "width": 1}, {"from": "GCA", "to": "CCA", "width": 1}, {"from": "GCA", "to": "Pro", "width": 1}, {"from": "GCA", "to": "Gly", "width": 1}, {"from": "GCA", "to": "GTA", "width": 1}, {"from": "GCA", "to": "Val", "width": 1}, {"from": "GCA", "to": "GAA", "width": 1}, {"from": "GCA", "to": "Glu", "width": 1}, {"from": "GCA", "to": "Thr", "width": 1}, {"from": "AAA", "to": "GAA", "width": 1}, {"from": "AAA", "to": "Glu", "width": 1}, {"from": "AAA", "to": "Thr", "width": 1}, {"from": "AAA", "to": "TAA", "width": 1}, {"from": "AAA", "to": "stp", "width": 1}, {"from": "AAA", "to": "AAT", "width": 1}, {"from": "AAA", "to": "Asn", "width": 1}, {"from": "AAA", "to": "CAA", "width": 1}, {"from": "AAA", "to": "Gln", "width": 1}, {"from": "AAA", "to": "Ile", "width": 1}, {"from": "AAA", "to": "Arg", "width": 1}, {"from": "AAA", "to": "AAC", "width": 1}, {"from": "GGG", "to": "Arg", "width": 1}, {"from": "GGG", "to": "GAG", "width": 1}, {"from": "GGG", "to": "Glu", "width": 1}, {"from": "GGG", "to": "TGG", "width": 1}, {"from": "GGG", "to": "Trp", "width": 1}, {"from": "GGG", "to": "Val", "width": 1}, {"from": "GAA", "to": "Lys", "width": 1}, {"from": "GAA", "to": "GTA", "width": 1}, {"from": "GAA", "to": "Val", "width": 1}, {"from": "GAA", "to": "TAA", "width": 1}, {"from": "GAA", "to": "stp", "width": 1}, {"from": "GAA", "to": "CAA", "width": 1}, {"from": "GAA", "to": "Gln", "width": 1}, {"from": "GAA", "to": "Asp", "width": 1}, {"from": "GAA", "to": "Ala", "width": 1}, {"from": "GAA", "to": "Gly", "width": 1}, {"from": "GAA", "to": "GAG", "width": 1}, {"from": "GAA", "to": "Glu", "width": 1}, {"from": "GTA", "to": "CTA", "width": 1}, {"from": "GTA", "to": "Leu", "width": 1}, {"from": "GTA", "to": "Ala", "width": 1}, {"from": "GTA", "to": "Gly", "width": 1}, {"from": "GTA", "to": "TTA", "width": 1}, {"from": "GTA", "to": "ATA", "width": 1}, {"from": "GTA", "to": "Ile", "width": 1}, {"from": "TGG", "to": "Gly", "width": 1}, {"from": "TGG", "to": "TAG", "width": 1}, {"from": "TGG", "to": "stp", "width": 1}, {"from": "TGG", "to": "TGA", "width": 1}, {"from": "TGG", "to": "Cys", "width": 1}, {"from": "TGG", "to": "Arg", "width": 1}, {"from": "TGG", "to": "TGT", "width": 1}, {"from": "TGG", "to": "TCG", "width": 1}, {"from": "TGG", "to": "Ser", "width": 1}, {"from": "TGG", "to": "TTG", "width": 1}, {"from": "TGG", "to": "Leu", "width": 1}, {"from": "GTC", "to": "GCC", "width": 1}, {"from": "GTC", "to": "Ala", "width": 1}, {"from": "GTC", "to": "Asp", "width": 1}, {"from": "GTC", "to": "CTC", "width": 1}, {"from": "GTC", "to": "Leu", "width": 1}, {"from": "GTC", "to": "TTC", "width": 1}, {"from": "GTC", "to": "Phe", "width": 1}, {"from": "GTC", "to": "GGC", "width": 1}, {"from": "GTC", "to": "Gly", "width": 1}, {"from": "GAG", "to": "AAG", "width": 1}, {"from": "GAG", "to": "Lys", "width": 1}, {"from": "GAG", "to": "Val", "width": 1}, {"from": "GAG", "to": "Asp", "width": 1}, {"from": "GAG", "to": "GAT", "width": 1}, {"from": "GAG", "to": "TAG", "width": 1}, {"from": "GAG", "to": "stp", "width": 1}, {"from": "GAG", "to": "Gln", "width": 1}, {"from": "GAG", "to": "Gly", "width": 1}, {"from": "GAG", "to": "GCG", "width": 1}, {"from": "GAG", "to": "Ala", "width": 1}, {"from": "TAT", "to": "AAT", "width": 1}, {"from": "TAT", "to": "Asn", "width": 1}, {"from": "TAT", "to": "CAT", "width": 1}, {"from": "TAT", "to": "His", "width": 1}, {"from": "TAT", "to": "TGT", "width": 1}, {"from": "TAT", "to": "Cys", "width": 1}, {"from": "TAT", "to": "TAG", "width": 1}, {"from": "TAT", "to": "stp", "width": 1}, {"from": "TAT", "to": "TAA", "width": 1}, {"from": "TAT", "to": "TTT", "width": 1}, {"from": "TAT", "to": "Phe", "width": 1}, {"from": "TAT", "to": "TCT", "width": 1}, {"from": "TAT", "to": "Ser", "width": 1}, {"from": "TAT", "to": "Asp", "width": 1}, {"from": "AAT", "to": "Lys", "width": 1}, {"from": "AAT", "to": "Tyr", "width": 1}, {"from": "AAT", "to": "Asp", "width": 1}, {"from": "AAT", "to": "ATT", "width": 1}, {"from": "AAT", "to": "Ile", "width": 1}, {"from": "AAT", "to": "Ser", "width": 1}, {"from": "AAT", "to": "ACT", "width": 1}, {"from": "AAT", "to": "Thr", "width": 1}, {"from": "AAT", "to": "AAG", "width": 1}, {"from": "CAT", "to": "Tyr", "width": 1}, {"from": "CAT", "to": "Arg", "width": 1}, {"from": "CAT", "to": "CAA", "width": 1}, {"from": "CAT", "to": "Gln", "width": 1}, {"from": "CAT", "to": "AAT", "width": 1}, {"from": "CAT", "to": "Asn", "width": 1}, {"from": "CAT", "to": "Leu", "width": 1}, {"from": "CAT", "to": "Pro", "width": 1}, {"from": "CAT", "to": "Asp", "width": 1}, {"from": "TGT", "to": "Gly", "width": 1}, {"from": "TGT", "to": "Ser", "width": 1}, {"from": "TGT", "to": "TTT", "width": 1}, {"from": "TGT", "to": "Phe", "width": 1}, {"from": "TGT", "to": "TCT", "width": 1}, {"from": "TGT", "to": "Tyr", "width": 1}, {"from": "TGT", "to": "Arg", "width": 1}, {"from": "TGT", "to": "TGA", "width": 1}, {"from": "TGT", "to": "stp", "width": 1}, {"from": "TCA", "to": "TGA", "width": 1}, {"from": "TCA", "to": "stp", "width": 1}, {"from": "TCA", "to": "CCA", "width": 1}, {"from": "TCA", "to": "Pro", "width": 1}, {"from": "TCA", "to": "TAA", "width": 1}, {"from": "TCA", "to": "TTA", "width": 1}, {"from": "TCA", "to": "Leu", "width": 1}, {"from": "AAG", "to": "TAG", "width": 1}, {"from": "AAG", "to": "stp", "width": 1}, {"from": "AAG", "to": "Glu", "width": 1}, {"from": "AAG", "to": "ACG", "width": 1}, {"from": "AAG", "to": "Thr", "width": 1}, {"from": "AAG", "to": "Asn", "width": 1}, {"from": "AAG", "to": "AGG", "width": 1}, {"from": "AAG", "to": "Arg", "width": 1}, {"from": "AAG", "to": "Met", "width": 1}, {"from": "ACG", "to": "ACA", "width": 1}, {"from": "ACG", "to": "Thr", "width": 1}, {"from": "ACT", "to": "GCT", "width": 1}, {"from": "ACT", "to": "Ala", "width": 1}, {"from": "ACT", "to": "Pro", "width": 1}, {"from": "ACT", "to": "Asn", "width": 1}, {"from": "ACT", "to": "ATT", "width": 1}, {"from": "ACT", "to": "Ile", "width": 1}, {"from": "ACT", "to": "TCT", "width": 1}, {"from": "ACT", "to": "Ser", "width": 1}, {"from": "GCT", "to": "TCT", "width": 1}, {"from": "GCT", "to": "Ser", "width": 1}, {"from": "GCT", "to": "Asp", "width": 1}, {"from": "GCT", "to": "CCT", "width": 1}, {"from": "GCT", "to": "Pro", "width": 1}, {"from": "GCT", "to": "Thr", "width": 1}, {"from": "GCT", "to": "Gly", "width": 1}, {"from": "GCT", "to": "GTT", "width": 1}, {"from": "GCT", "to": "Val", "width": 1}, {"from": "ATT", "to": "Thr", "width": 1}, {"from": "ATT", "to": "GTT", "width": 1}, {"from": "ATT", "to": "Val", "width": 1}, {"from": "ATT", "to": "Ser", "width": 1}, {"from": "ATT", "to": "TTT", "width": 1}, {"from": "ATT", "to": "Phe", "width": 1}, {"from": "ATT", "to": "Asn", "width": 1}, {"from": "TTT", "to": "TCT", "width": 1}, {"from": "TTT", "to": "Ser", "width": 1}, {"from": "TTT", "to": "GTT", "width": 1}, {"from": "TTT", "to": "Val", "width": 1}, {"from": "TTT", "to": "Ile", "width": 1}, {"from": "TTT", "to": "Leu", "width": 1}, {"from": "TTT", "to": "TTG", "width": 1}, {"from": "TTT", "to": "Cys", "width": 1}, {"from": "TTT", "to": "TTA", "width": 1}, {"from": "TCT", "to": "Pro", "width": 1}, {"from": "TCT", "to": "Phe", "width": 1}, {"from": "TCT", "to": "Cys", "width": 1}, {"from": "TCT", "to": "Tyr", "width": 1}, {"from": "CAA", "to": "TAA", "width": 1}, {"from": "CAA", "to": "stp", "width": 1}, {"from": "CAA", "to": "Glu", "width": 1}, {"from": "CAA", "to": "Lys", "width": 1}, {"from": "CAA", "to": "His", "width": 1}, {"from": "CAA", "to": "CAC", "width": 1}, {"from": "TTC", "to": "CTC", "width": 1}, {"from": "TTC", "to": "Leu", "width": 1}, {"from": "TTC", "to": "TCC", "width": 1}, {"from": "TTC", "to": "Ser", "width": 1}, {"from": "TTC", "to": "TTG", "width": 1}, {"from": "TTC", "to": "Val", "width": 1}, {"from": "TTC", "to": "TTA", "width": 1}, {"from": "TTC", "to": "Pro", "width": 1}, {"from": "TTC", "to": "TAC", "width": 1}, {"from": "TTC", "to": "Tyr", "width": 1}, {"from": "TTC", "to": "ATC", "width": 1}, {"from": "TTC", "to": "Ile", "width": 1}, {"from": "TTC", "to": "Cys", "width": 1}, {"from": "CTC", "to": "Phe", "width": 1}, {"from": "CTC", "to": "CCC", "width": 1}, {"from": "CTC", "to": "Pro", "width": 1}, {"from": "CTC", "to": "Val", "width": 1}, {"from": "CTC", "to": "CGC", "width": 1}, {"from": "CTC", "to": "Arg", "width": 1}, {"from": "GTT", "to": "Phe", "width": 1}, {"from": "GTT", "to": "Ala", "width": 1}, {"from": "GTT", "to": "Asp", "width": 1}, {"from": "GTT", "to": "Leu", "width": 1}, {"from": "GTT", "to": "Ile", "width": 1}, {"from": "GTT", "to": "Gly", "width": 1}, {"from": "CCA", "to": "Arg", "width": 1}, {"from": "CCA", "to": "Ser", "width": 1}, {"from": "CCA", "to": "CTA", "width": 1}, {"from": "CCA", "to": "Leu", "width": 1}, {"from": "CCA", "to": "Thr", "width": 1}, {"from": "CCA", "to": "Ala", "width": 1}, {"from": "CCA", "to": "CAA", "width": 1}, {"from": "CCA", "to": "Gln", "width": 1}, {"from": "ACC", "to": "GCC", "width": 1}, {"from": "ACC", "to": "Ala", "width": 1}, {"from": "ACC", "to": "TCC", "width": 1}, {"from": "ACC", "to": "Ser", "width": 1}, {"from": "ACC", "to": "CCC", "width": 1}, {"from": "ACC", "to": "Pro", "width": 1}, {"from": "ACC", "to": "ATC", "width": 1}, {"from": "ACC", "to": "Ile", "width": 1}, {"from": "ACC", "to": "AAC", "width": 1}, {"from": "ACC", "to": "Asn", "width": 1}, {"from": "GCC", "to": "Thr", "width": 1}, {"from": "GCC", "to": "TCC", "width": 1}, {"from": "GCC", "to": "Ser", "width": 1}, {"from": "GCC", "to": "Asp", "width": 1}, {"from": "GCC", "to": "Val", "width": 1}, {"from": "GCC", "to": "CCC", "width": 1}, {"from": "GCC", "to": "Pro", "width": 1}, {"from": "TCC", "to": "Phe", "width": 1}, {"from": "TCC", "to": "CCC", "width": 1}, {"from": "TCC", "to": "Pro", "width": 1}, {"from": "TCC", "to": "Cys", "width": 1}, {"from": "TCC", "to": "Tyr", "width": 1}, {"from": "ATC", "to": "GTC", "width": 1}, {"from": "ATC", "to": "Val", "width": 1}, {"from": "ATC", "to": "AAC", "width": 1}, {"from": "ATC", "to": "Asn", "width": 1}, {"from": "ATC", "to": "AGC", "width": 1}, {"from": "ATC", "to": "Ser", "width": 1}, {"from": "ATC", "to": "Thr", "width": 1}, {"from": "ATC", "to": "Phe", "width": 1}, {"from": "ATC", "to": "ATA", "width": 1}, {"from": "ATC", "to": "Ile", "width": 1}, {"from": "ATC", "to": "CTC", "width": 1}, {"from": "ATC", "to": "Leu", "width": 1}, {"from": "AAC", "to": "Asp", "width": 1}, {"from": "AAC", "to": "Ile", "width": 1}, {"from": "AAC", "to": "AGC", "width": 1}, {"from": "AAC", "to": "Ser", "width": 1}, {"from": "AAC", "to": "Thr", "width": 1}, {"from": "AAC", "to": "AAG", "width": 1}, {"from": "AAC", "to": "Lys", "width": 1}, {"from": "AAC", "to": "AAT", "width": 1}, {"from": "AAC", "to": "Asn", "width": 1}, {"from": "AAC", "to": "CAC", "width": 1}, {"from": "AAC", "to": "His", "width": 1}, {"from": "AAC", "to": "Tyr", "width": 1}, {"from": "AGC", "to": "Asn", "width": 1}, {"from": "AGC", "to": "TGC", "width": 1}, {"from": "AGC", "to": "Cys", "width": 1}, {"from": "AGC", "to": "GGC", "width": 1}, {"from": "AGC", "to": "Gly", "width": 1}, {"from": "AGC", "to": "ACC", "width": 1}, {"from": "AGC", "to": "Thr", "width": 1}, {"from": "AGC", "to": "AGG", "width": 1}, {"from": "AGC", "to": "Arg", "width": 1}, {"from": "AGC", "to": "Ile", "width": 1}, {"from": "GCG", "to": "CCG", "width": 1}, {"from": "GCG", "to": "Pro", "width": 1}, {"from": "GCG", "to": "Glu", "width": 1}, {"from": "GCG", "to": "GCA", "width": 1}, {"from": "GCG", "to": "Ala", "width": 1}, {"from": "GGC", "to": "Cys", "width": 1}, {"from": "GGC", "to": "Asp", "width": 1}, {"from": "GGC", "to": "CGC", "width": 1}, {"from": "GGC", "to": "Arg", "width": 1}, {"from": "GGC", "to": "Val", "width": 1}, {"from": "GGC", "to": "Ser", "width": 1}, {"from": "GGC", "to": "GCC", "width": 1}, {"from": "GGC", "to": "Ala", "width": 1}, {"from": "CCC", "to": "CGC", "width": 1}, {"from": "CCC", "to": "Arg", "width": 1}, {"from": "CCC", "to": "Ala", "width": 1}, {"from": "CCC", "to": "Ser", "width": 1}, {"from": "CCC", "to": "CAC", "width": 1}, {"from": "CCC", "to": "His", "width": 1}, {"from": "CCC", "to": "Leu", "width": 1}, {"from": "CTA", "to": "Arg", "width": 1}, {"from": "CTA", "to": "Pro", "width": 1}, {"from": "CTA", "to": "CAA", "width": 1}, {"from": "CTA", "to": "Gln", "width": 1}, {"from": "CGC", "to": "Cys", "width": 1}, {"from": "CGC", "to": "AGC", "width": 1}, {"from": "CGC", "to": "Ser", "width": 1}, {"from": "CGC", "to": "CAC", "width": 1}, {"from": "CGC", "to": "His", "width": 1}, {"from": "CGC", "to": "Leu", "width": 1}, {"from": "CGC", "to": "Pro", "width": 1}, {"from": "CGC", "to": "Gly", "width": 1}, {"from": "CAC", "to": "Arg", "width": 1}, {"from": "CAC", "to": "CTC", "width": 1}, {"from": "CAC", "to": "Leu", "width": 1}, {"from": "CAC", "to": "Asp", "width": 1}, {"from": "CAC", "to": "Tyr", "width": 1}, {"from": "CAC", "to": "Pro", "width": 1}, {"from": "CAC", "to": "Gln", "width": 1}, {"from": "TTG", "to": "TAG", "width": 1}, {"from": "TTG", "to": "stp", "width": 1}, {"from": "TTG", "to": "TCG", "width": 1}, {"from": "TTG", "to": "Ser", "width": 1}, {"from": "TTG", "to": "Phe", "width": 1}, {"from": "TTG", "to": "GTG", "width": 1}, {"from": "TTG", "to": "Val", "width": 1}, {"from": "TTG", "to": "Trp", "width": 1}, {"from": "TTG", "to": "Pro", "width": 1}, {"from": "TCG", "to": "Leu", "width": 1}, {"from": "TCG", "to": "Pro", "width": 1}, {"from": "TCG", "to": "TAG", "width": 1}, {"from": "TCG", "to": "stp", "width": 1}, {"from": "TTA", "to": "TGA", "width": 1}, {"from": "TTA", "to": "stp", "width": 1}, {"from": "TTA", "to": "TAA", "width": 1}, {"from": "TTA", "to": "Phe", "width": 1}, {"from": "TTA", "to": "Val", "width": 1}, {"from": "TTA", "to": "Ser", "width": 1}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {
+    "configure": {
+        "enabled": true,
+        "filter": [
+            "physics"
+        ]
+    },
+    "edges": {
+        "color": {
+            "inherit": true
+        },
+        "smooth": {
+            "enabled": true,
+            "type": "dynamic"
+        }
+    },
+    "interaction": {
+        "dragNodes": true,
+        "hideEdgesOnDrag": false,
+        "hideNodesOnDrag": false
+    },
+    "physics": {
+        "enabled": true,
+        "forceAtlas2Based": {
+            "avoidOverlap": 0,
+            "centralGravity": 0.015,
+            "damping": 0.4,
+            "gravitationalConstant": -31,
+            "springConstant": 0.01,
+            "springLength": 100
+        },
+        "solver": "forceAtlas2Based",
+        "stabilization": {
+            "enabled": true,
+            "fit": true,
+            "iterations": 1000,
+            "onlyDynamicEdges": false,
+            "updateInterval": 50
+        }
+    }
+};
+
+                  
+
+
+                  
+                  // if this network requires displaying the configure window,
+                  // put it in its div
+                  options.configure["container"] = document.getElementById("config");
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+                    network.on("selectNode", neighbourhoodHighlight);
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>
